@@ -9,14 +9,14 @@ public class Tests {
      * This method loads the file and calls the parseFile() method from World.java
      * It will throw an IOException if the file cannot be loaded or does not exist
      */
-    public static void testsLoadFile(){
+    public static World testsLoadFile(){
 
         try {
-            World world= new World("a.txt");
-            world.parseFile();
+            return new World("a.txt");
         } catch (Exception io){
             System.out.println("An Exception was caught: "+io.getMessage());
             io.printStackTrace();
+            return null;
         }
     }
 }

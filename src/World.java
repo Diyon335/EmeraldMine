@@ -81,8 +81,9 @@ class World {
     public int getRows(){return this.rows;}
     public int getCols(){return this.cols;}
 
-    public World (String fileName){
+    public World (String fileName) throws BadFileFormatException {
         this.fileName = fileName;
+        this.parseFile();
     }
 
     public void parseFile() throws BadFileFormatException {

@@ -13,13 +13,13 @@ public class Main {
     public static void main(final String[] args) throws IOException {
 
         //final World world = new World(20, 20, 16, 3, 5);
-        Tests.testsLoadFile();
+        World world = Tests.testsLoadFile();
 
         // Play the game
         /**
          * Uncomment below
          */
-        /*
+
         while (world.status() == World.Playing)
         {
             System.out.println(world);
@@ -38,6 +38,6 @@ public class Main {
             case World.Win:  System.out.println("You win!"); break;
             case World.Loss: System.out.println("You lose. Bad luck."); break;
             default:         System.out.println("** Unexpected game outcome " + world.status() + ".");
-        }*/
+        }
     }
 }
