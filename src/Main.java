@@ -10,23 +10,25 @@ import java.io.IOException;
 
 public class Main {
 
-    public static void main(final String[] args) throws IOException {
+    public static void main(final String[] args) throws BadFileFormatException, IOException {
 
         //final World world = new World(20, 20, 16, 3, 5);
-        Tests.testsLoadFile();
+        //Tests.testLoadFiles();
+        World world = new World (20,20,7);
+        //final World world = new World("a.txt");
+        //System.out.println(world.getCols());
+        //System.out.println(world);
+        GUI gui = new GUI();
+        gui.init();
 
         // Play the game
-        /**
-         * Uncomment below
-         */
-        /*
-        while (world.status() == World.Playing)
-        {
+
+        while (world.status() == World.Playing) {
             System.out.println(world);
-            System.out.println("Enter move (w, a, s or d): ");
+            System.out.println("Enter move (u, l, d or r): ");
             final char ch = world.getMove();
             if (!world.validMove(ch))
-                System.out.println("Not a valid move. Try one of: w, a, s, or d");
+                System.out.println("Not a valid move. Try one of: u, l, d, or r");
             else
                 world.applyMove(ch);
         }
@@ -38,6 +40,6 @@ public class Main {
             case World.Win:  System.out.println("You win!"); break;
             case World.Loss: System.out.println("You lose. Bad luck."); break;
             default:         System.out.println("** Unexpected game outcome " + world.status() + ".");
-        }*/
+        }
     }
 }

@@ -19,6 +19,10 @@ abstract class WorldObject {
     public boolean isPlayer(){
         return false;
     }
+
+    public boolean isMonster(){return (canMove()&& !isPlayer());}
+    public boolean isOpen(){return false;}
+
     //for a monster's attack
     public char getMove(){
         return '?';
@@ -31,8 +35,20 @@ abstract class WorldObject {
     public String toString(){
         return "";
     }
-}
 
+    public static WorldObject createFromChar(final char ch) {
+        switch(ch) {
+            case '.': return new Space();
+            case '#': return new Dirt();
+            case 'e': return new Emerald();
+            case 'd': return new Diamond();
+            case 'r': return new Rock();
+            case 'a': return new Alien();
+            case 'p': return new Player();
+        }
+        return null;
+    }
+}
 /**
  * These are the subclasses of the abstract class WorldObject
  */
@@ -256,7 +272,7 @@ class Player extends WorldObject{
     @Override
     public char getMove() {
         Scanner input = new Scanner (System.in);
-        //player inputs a single letter string (w, a, s or d) and it'll read that and return this as the player move
+        //player inputs a single letter string (u, l, d or r) and it'll read that and return this as the player move
         return input.next().charAt(0);
     }
 

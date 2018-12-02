@@ -1,5 +1,3 @@
-import java.io.IOException;
-
 /**
  * @author Diyon
  * This class throws a BadFileFormatException if the file that is being read has an incorrect format
@@ -25,7 +23,8 @@ public class BadFileFormatException extends Exception {
     /**
      * @return returns a string with the exception message
      */
+    @Override
     public String toString() {
-        return "You have an error of the type: "+errorMessage+"| At row: "+row+" and column: "+column;
+        return "[BadFileFormatException] You have an error: "+errorMessage+"| At row: "+row+" and column: "+column;
     }
 }

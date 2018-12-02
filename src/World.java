@@ -1,8 +1,8 @@
-
 import java.io.*;
-import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.Random;
 
 /**
  * Author: Cameron Browne (based on code by Marc Lanctot).
@@ -14,15 +14,16 @@ import java.util.Collections;
 
 //-----------------------------------------------------------------------------
 
-class World {
+public class World {
     private int rows, cols;  // dimension of world in rows and columns
-    //int rows, cols;  // dimension of world in rows and columns
-    private WorldObject[][] world;
+    private WorldObject[][] world; //initialise the world
 
     private int emeraldsRemaining;  // target number of emeralds
     //add diamonds and rocks
     private int diamonds;
     private int rocks;
+
+    private final Random rng = new Random();
 
     public static final int Playing = 0;  // game in progress
     public static final int Win     = 1;  // player win
@@ -31,14 +32,17 @@ class World {
 
     public static final int Off = -1;  // off-board cell
 
-    private RC playerAt = null;
-    private RC alienAt  = null;
-
-    private String fileName;
-    private BufferedReader in;
+    /**
+     * These variables below are for Assignment 3
+     */
+    private String fileName; //inpute file name
+    //stores the location of where an error might occur
     private int errorRow;
     private int errorCol;
 
+    /**
+     * The following class can store a location
+     */
     class RC {
         int row = -1;
         int col = -1;
@@ -53,139 +57,204 @@ class World {
             col = c;
         }
 
+        /**
+         *
+         * @param other - Checks if two locations are the same
+         * @return - returns a boolean
+         */
         public boolean matches(final RC other)
         {
             return row == other.row && col == other.col;
         }
     }
 
+    private RC playerAt = null;
+    private RC alienAt  = null;
+    private RC supported = null;
+
     /**
-     * Not needed for assignemtn 3
-     * @param rows
-     * @param cols
-     * @param emeralds
-     * @param diamonds
-     * @param rocks
+     * Creates a world
+     * @param rows - amount of rows
+     * @param cols - amount of columns
+     * @param emeralds - "" emeralds
      */
-    /*
-    public World(final int rows, final int cols, final int emeralds, final int diamonds, final int rocks) {
+
+    public World(int rows, int cols, int emeralds) {
         this.rows = rows;
         this.cols = cols;
         this.emeraldsRemaining = emeralds;
 
-        this.diamonds= diamonds;
-        this.rocks= rocks;
-        //init();
-    }*/
-
-    public int getRows(){return this.rows;}
-    public int getCols(){return this.cols;}
-
-    public World (String fileName){
-        this.fileName = fileName;
+        init();
     }
 
-    public void parseFile() throws BadFileFormatException {
-        try {
-            this.in = new BufferedReader(new FileReader(new File((this.fileName))));
+    public String getWorldObject(int r, int c){return this.world[r][c].toString();}
 
-            String line = in.readLine();
-            this.rows = Integer.parseInt(line);
-            //System.out.println(this.rows);
+    /**
+     * @return - returns rows or columns
+     */
 
-            line = in.readLine();
-            this.cols = Integer.parseInt(line);
-            //System.out.println(this.cols);
+    public int getRows(){return rows;}
+    public int getCols(){return cols;}
 
-            line = in.readLine();
-            this.emeraldsRemaining = Integer.parseInt(line);
-            //System.out.println(this.emeraldsRemaining);
+    public WorldObject[][] getWorld() {return this.world;}
 
-            this.world = new WorldObject[rows][cols];
+    /**
+     * Creates a world after reading a file
+     * @param fileName - name of the input file
+     * @throws BadFileFormatException - gets thrown if file does not follow a specific format
+     */
 
-            line = in.readLine();
-            int boardRow = 0;
-            while (line != null){
-                for (int i = 0; i < cols; ++i) {
-                    switch (line.charAt(i)) {
-                        case 'd': ++diamonds; world[boardRow][i] = new Diamond(); break;
-                        case 'r': ++rocks; world[boardRow][i] = new Rock(); break;
-                        case '.': this.world[boardRow][i] = new Space(); break;
-                        case '#': this.world[boardRow][i] = new Dirt(); break;
-                        case 'p': playerAt = new RC(boardRow, i); world[playerAt.row][playerAt.col] = new Player(); break;
-                        case 'a': alienAt = new RC(boardRow, i); world[alienAt.row][alienAt.col] = new Alien(); break;
-                        case 'e': this.world[boardRow][i] = new Emerald(); break;
-                        default: this.errorRow = boardRow; this.errorCol = i; throw new BadFileFormatException("Incorrect file format", this.errorRow, this.errorCol);
-                    }
-                }
-                ++boardRow;
-                line = in.readLine();
+    public World (String fileName) throws BadFileFormatException, IOException {
+        this.parseFile(fileName);
+    }
+
+    /**
+     * Parses the file from text to object so the game can be played
+     * @throws BadFileFormatException - gets thrown if the file is not of a specific format
+     */
+    public void parseFile(String fileName) throws BadFileFormatException, IOException {
+
+        final BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName)));
+
+        this.rows = Integer.parseInt(reader.readLine());
+        this.cols = Integer.parseInt(reader.readLine());
+        this.emeraldsRemaining = Integer.parseInt(reader.readLine());
+        world = new WorldObject[rows][cols];
+
+        int row = 0;
+        int emeraldsInWorld = 0;
+        String line = reader.readLine();
+
+        while(line!=null){
+            if (row>=rows){throw new BadFileFormatException("Too many rows",row,-1);}
+
+            if (line.length() < cols){throw new BadFileFormatException("Too few columns (" + line.length() + ")", row, -1);}
+
+            if (line.length() > cols){throw new BadFileFormatException("Too many columns (" + line.length() + ")", row, -1);}
+
+            for (int col = 0; col < cols; col++)
+            {
+                // Create the object at this grid cell
+                final char ch = line.charAt(col);
+                world[row][col] = WorldObject.createFromChar(ch);
+                if (world[row][col] == null)
+                    throw new BadFileFormatException("Invalid character: " + ch, row, col);
+
+
+                // Everything good so far, update the emerald count (if any)
+                emeraldsInWorld += world[row][col].getEmeraldValue();
             }
-            in.close();
-            status = Playing;
-            //System.out.println(toString());
+            line = reader.readLine();
+            row++;
         }
-        catch (Exception e){
-            e.printStackTrace();
-            throw new BadFileFormatException("Incorrect file format", this.errorRow , this.errorCol);
-        }
+
+        // Do a final check of the world dimensions
+        if (row != rows)
+            throw new BadFileFormatException("Not enough rows (" + rows + ")", -1, -1);
+
+        if (emeraldsInWorld < emeraldsRemaining)
+            throw new BadFileFormatException("Not enough emeralds in the world: " + emeraldsInWorld, -1, -1);
+
+        reader.close();
+    }
+
+    /**
+     * @param exceptRow - unaffected row
+     * @param exceptCol - unaffected col
+     * @return - returns true if an object with mass falls on the player. false if not
+     */
+    private boolean applyGravity(int exceptRow, int exceptCol){
+
+        boolean fellOnPlayer = false;
+
+        for (int row = rows-2; row >= 0; row--)
+            for (int col = 0; col < cols; col++)
+            {
+                if (row == exceptRow && col == exceptCol)
+                    continue;  // do not apply gravity here
+
+                int rowBelow = row+1;  // because rows are indexed bottom up
+
+                if (world[row][col].hasMass() && world[rowBelow][col].isVulnerable())
+                {
+                    // Object with mass drops a row
+                    if (world[rowBelow][col].isPlayer())
+                    {
+                        fellOnPlayer = true;  // player squashed
+                    }
+                    else if (world[rowBelow][col].isMonster())
+                    {
+                        System.out.println("Alien squashed!");
+                        alienAt = null;  // remove the alien from the game
+                    }
+
+                    // Move this object down a row
+                    world[rowBelow][col] = world[row][col];
+                    world[row][col] = new Space();
+                }
+            }
+        return fellOnPlayer;
     }
 
     public int status() {return status;}
 
     /**
      * Not needed for assignment 3
+     * Creates a world if the first World constructor is called
      */
-    /*
+
     private void init() {
         // Initialise the map
         world = new WorldObject[rows][cols];
-        for (int r = 0; r < rows; r++)
-            for (int c = 0; c < cols; c++)
-                world[r][c] = new Dirt();
-
         // Create list of cells and shuffle
-        final List<Integer> cells = new ArrayList<Integer>();
-        for (int row = 0; row < rows; row++) {
-            for (int col = 0; col < cols; col++) {
-                final int cell = row * cols + col;
-                cells.add(new Integer(cell));
-            }
-            Collections.shuffle(cells);
-        }
+        final List<WorldObject> cells = new ArrayList<>();
 
-        // Add the player
-        int cell = cells.get(0).intValue();
-        playerAt = new RC(cell/cols, cell%cols);
-        world[playerAt.row][playerAt.col] = new Player();
-
-        // Add the alien
-        cell = cells.get(1).intValue();
-        alienAt = new RC(cell/cols, cell%cols);
-        world[alienAt.row][alienAt.col] = new Alien();
+        cells.add(new Player());
+        cells.add(new Alien());
 
         // Add the emeralds
-        for (int e = 0; e < emeraldsRemaining+1; e++) {
-            cell = cells.get(2+e).intValue();
-            world[cell / cols][cell % cols] = new Emerald();
-        }
+        for (int e = 0; e < emeraldsRemaining+1; e++)
+            cells.add(new Emerald());
 
         // Add the diamonds
-        for (int d= 0; d < diamonds; d++) {
-            cell = cells.get((3+1)+emeraldsRemaining+d).intValue();
-            world[cell / cols][cell % cols] = new Diamond();
-        }
+        final int numDiamonds = 3;
+        emeraldsRemaining += 3 * numDiamonds;
+        for (int d = 0; d < numDiamonds; d++)
+            cells.add(new Diamond());
 
-        //Add the rocks
-        for (int r= 0; r < rocks; r++) {
-            cell = cells.get((4+1)+emeraldsRemaining+diamonds+r).intValue();
-            world[cell / cols][cell % cols] = new Rock();
+        // Add some rocks
+        final int numRocks = 4 + rng.nextInt(3);
+        for (int r = 0; r < numRocks; r++)
+            cells.add(new Rock());
+
+        // Fill the rest with dirt
+        while (cells.size() < rows * cols)
+            cells.add(new Dirt());
+
+        // Shuffle objects and put in world array
+        Collections.shuffle(cells);
+        for (int n = 0; n < cells.size(); n++)
+        {
+            int row = n / cols;
+            int col = n % cols;
+
+            world[row][col] = cells.get(n);
+
+            if (world[row][col].isPlayer())
+                playerAt = new RC(row, col);
+            else if (world[row][col].isMonster())
+                alienAt = new RC(row, col);
         }
 
         status = Playing;  // game is now active
-    }*/
+    }
 
-
+    /**
+     * Checks if the specific position is in the bounds of the game
+     * @param row - row of interest
+     * @param col - column of interest
+     * @return - returns true or false
+     */
     public boolean inBounds(int row, int col) {
         return (row >= 0 && row < rows && col >= 0 && col < cols);
     }
@@ -195,121 +264,128 @@ class World {
     }
     //changed valid chars to w,a,s or d
     public boolean validMove(final char ch) {
-        return ch == 'w' || ch == 'a' || ch == 's' || ch == 'd';
+        return ch == 'u' || ch == 'l' || ch == 'd' || ch == 'r';
     }
 
-    //applies the move and returns status of game
+    /**
+     * All moves are applied here
+     * @param ch - character: u,d,l or r
+     * @return - returns status of the game
+     */
     public int applyMove(final char ch) {
-        alienMove();
+
         playerMove(ch);
+        if (alienAt != null)
+        {
+            final char chAlien = world[alienAt.row][alienAt.col].getMove();
+            System.out.println("Alien steps '" + chAlien + "'.");
+            alienMove(chAlien);
+        }
+
+        // Apply gravity
+        if
+        (applyGravity
+                (
+                        supported == null ? -1 : supported.row,
+                        supported == null ? -1 : supported.col
+                )
+        )
+            status = Loss;  // player killed by something dropping on them
+
         return status;
     }
 
-   //makes the player move
-    public void playerMove(final char ch)
-    {
-        // Check the player's destination
-        int nextRow = playerAt.row;
-        int nextCol = playerAt.col;
-        switch (ch)
-        {
-            case 'w': nextRow--; break;
-            case 's': nextRow++; break;
-            case 'a': nextCol--; break;
-            case 'd': nextCol++; break;
-            default: System.out.println("Unexpected char '" + ch + "'.");
-        }
-        world[playerAt.row][playerAt.col] = new Space();
+    /**
+     * Player's move is made here
+     * @param ch - character: u,d,l or r
+     */
+    public void playerMove(final char ch) {
+        supported = null;
 
-        //if he goes out of bounds or walks into an alien
-        if (!inBounds(nextRow, nextCol))
-        {
-            System.out.println("You fell off the world!");
-            status = Loss;  // player dies
-            return;
-
-            //if it's an alien, game is lost
-        } else if (world[nextRow][nextCol].canMove() && !world[nextRow][nextCol].isPlayer()){
-
-            System.out.println("You were eaten!");
+        final RC playerNext = stepTo(playerAt, ch);
+        if (!inBounds(playerNext.row, playerNext.col) || world[playerNext.row][playerNext.col].isMonster()) {
+            // Player dies
             status = Loss;
+            world[playerAt.row][playerAt.col] = new Space();  // remove the player from this world
             return;
-
-            //if the next place is not edible (like a rock), do nothing
-        } else if (!world[nextRow][nextCol].isEdible()){
-
-            world[playerAt.row][playerAt.col] = new Player();
-            System.out.println("Can't move! Find another way");
-            return;
-
-        }//if it's an emerald or diamond or dirt
-        else if (world[nextRow][nextCol].isEdible()){
-
-            emeraldsRemaining -= world[nextRow][nextCol].getEmeraldValue();
-
         }
 
-        // Move the player
-        playerAt.set(nextRow, nextCol);
-        world[nextRow][nextCol] = new Player();
+        if (world[playerNext.row][playerNext.col].isEdible()) {
+            // Stepping into an edible cell, decrease by its point value
+            emeraldsRemaining -= world[playerNext.row][playerNext.col].getEmeraldValue();
 
-        //if the required emerald value is achieved,game is won
-        if (emeraldsRemaining <= 0) {
-            System.out.println("You win!");
-            status = Win;  // player wins
+            // Do not go below 0
+            if (emeraldsRemaining <= 0)
+                emeraldsRemaining = 0;
+
+            // Check for a win
+            if (emeraldsRemaining == 0)
+                status = Win;
+
+            // Move the player
+            world[playerAt.row][playerAt.col] = new Space();
+            playerAt.set(playerNext.row, playerNext.col);
+            world[playerAt.row][playerAt.col] = new Player();
+
+            // Check whether player supports an object with their head
+            final int rowAbove = playerAt.row - 1;
+            if (inBounds(rowAbove, playerAt.col) && world[rowAbove][playerAt.col].hasMass()) {
+                // Player supports the object above
+                supported = new RC(rowAbove, playerAt.col);
+            }
+        } else {
+            // Can't step into an inedible object
+            System.out.println("There is an obstacle in the way.");
         }
     }
 
-    public void alienMove() {
+    /**
+     * Alien makes a random move here
+     */
+
+    public void alienMove(final char ch) {
         if (alienAt == null)
             return;  // alien is off the board and no longer active
 
-        // Move the alien in a random direction
-        int nextRow = alienAt.row;
-        int nextCol = alienAt.col;
+        final RC alienNext = stepTo(alienAt, ch);
 
-        switch (new Alien().getMove()) {
-            //could be either one of these cases, u, d , l or r
-            case 'd':
-                nextRow++;
-                break;
-            case 'u':
-                nextRow--;
-                break;
-            case 'r':
-                nextCol++;
-                break;
-            case 'l':
-                nextCol--;
-                break;
-        }
-        world[alienAt.row][alienAt.col] = new Space();
-
-        if (inBounds(nextRow, nextCol)) {
-            // Alien remains in the game
-            alienAt.set(nextRow, nextCol);
-            world[alienAt.row][alienAt.col] = new Alien();
-
-            if (alienAt.matches(playerAt))
-                status = Loss;  // alien kills player
-        } else if (!inBounds(nextRow, nextCol)) {
-            System.out.println("The Alien fell off the world!");
+        if (!inBounds(alienNext.row, alienNext.col)) {
+            world[alienAt.row][alienAt.col] = new Space();
             alienAt = null;  // alien exits the game
 
+        } else if (world[alienNext.row][alienNext.col].isEdible()) {
+            // Alien can move there
+            if (world[alienNext.row][alienNext.col].isPlayer())
+                status = Loss;  // alien will step onto player
 
-        }//if it's an emerald or diamond
-        else if (world[nextRow][nextCol].isEdible() && !world[alienAt.row][alienAt.col].isPlayer()) {
-            System.out.println("The Alien got something!");
-            //the alien getting an emerald or diamond won't add towards the player's victory
-            //emeraldsRemaining -= world[nextRow][nextCol].getEmeraldValue();
-
-            //if the next place is not edible, like a rock
-        } else if (!world[nextRow][nextCol].isEdible()) {
-
+            world[alienAt.row][alienAt.col] = new Space();
+            alienAt.set(alienNext.row, alienNext.col);
             world[alienAt.row][alienAt.col] = new Alien();
         }
     }
 
+    /**
+     * @return Coordinate of step in the specified direction.
+     */
+    public RC stepTo(final RC from, final char dirn)
+    {
+        int dRow = 0;
+        int dCol = 0;
+        switch (dirn)
+        {
+            case 'u': dRow--; break;
+            case 'd': dRow++; break;
+            case 'l': dCol--; break;
+            case 'r': dCol++; break;
+            default: System.out.println("** World.stepTo(): Unexpected dirn '" + dirn + "'.");
+        }
+        return new RC(from.row+dRow, from.col+dCol);
+    }
+
+    /**
+     * Prints a string representation of the game
+     * @return - string
+     */
     @Override
     public String toString() {
         String str = "Emeralds remaining: " + emeraldsRemaining + "\n";
